@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 import streamlit.components.v1 as components
 
 # Auto refresh the Streamlit app every 60 seconds (60000 ms)
-st_autorefresh(interval=60000, limit=None, key="datarefresh")
+st_autorefresh(interval=30000, limit=None, key="datarefresh")
 
 # Load external CSS
 with open("cricket.css") as f:
@@ -82,6 +82,7 @@ updateClock();
 
 #matchData = matchData[['id', 'my_team_name', 'oppo_team_name', 'venue']]
 #st.dataframe(matchData)
+
 
 
 
