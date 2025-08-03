@@ -9,10 +9,10 @@ site_id = 2744
 season = str(datetime.now().year)
 api_token = "b79b6148398664ed1c59e9efcf9bb1fb"
 
-@st.cache_data(ttl=3600) # Cache data for 1 hour (site reloads every 60 seconds)
+@st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
 def returnMatches(matchDate):
     #st.caption(f"Last data pull: {pd.Timestamp.now().strftime('%H:%M:%S')}")
-    caption = (f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
+    caption = (f"Last data pull: {pd.Timestamp.now().strftime('%H:%M:%S')}")
 
     url = "https://play-cricket.com/api/v2/matches.json"
     params = {
@@ -88,49 +88,41 @@ def returnMatches(matchDate):
         filtered_df['away_club_id'] == club_id,filtered_df['away_team_name'],filtered_df['away_club_name']
         )
 
-        filtered_df = filtered_df[['id', 'my_team_name', 'oppo_team_name', 'venue', 'my_team_id', 'home_team_name','away_team_name','homelogo','awaylogo', 'home_team_id','away_team_id','match_time']]
+        filtered_df = filtered_df[['id', 'my_team_name', 'oppo_team_name', 'venue', 'my_team_id', 'home_team_name','away_team_name','homelogo','awaylogo', 'home_team_id','away_team_id']]
 
-        return filtered_df, caption
-    
-    except Exception as e:
-        return pd.DataFrame(), caption
+        if filtered_df.empty:
+            return filtered_df, caption
 
+        def get_match_detail(match_id):
+            url = "https://play-cricket.com/api/v2/match_detail.json"
+            params = {
+                "match_id": match_id,
+                "api_token": api_token
+            }
+            try:
+                response = requests.get(url, params=params, verify=False)
+                response.raise_for_status()
+                match = response.json().get("match_details", [])[0] #to get results...
+                innings = response.json().get("match_details", [])[0].get("innings", []) #to get scores...
+                
+                team1 = innings[0].get("team_batting_id") if len(innings) > 0 else None
+                runs1 = innings[0].get("runs") if len(innings) > 0 else None
+                wickets1 = innings[0].get("wickets") if len(innings) > 0 else None
+                overs1 = innings[0].get("overs") if len(innings) > 0 else None
+                
+                team2 = innings[1].get("team_batting_id") if len(innings) > 1 else None
+                runs2 = innings[1].get("runs") if len(innings) > 1 else None
+                wickets2 = innings[1].get("wickets") if len(innings) > 1 else None
+                overs2 = innings[1].get("overs") if len(innings) > 1 else None 
 
-@st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
-def return_scores(filtered_df):
+                result = match.get("result_description") if len(match) > 0 else None
 
-    caption = (f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
-
-    def get_match_detail(match_id):
-        url = "https://play-cricket.com/api/v2/match_detail.json"
-        params = {
-            "match_id": match_id,
-            "api_token": api_token
-        }
-        try:
-            response = requests.get(url, params=params, verify=False)
-            response.raise_for_status()
-            match = response.json().get("match_details", [])[0] #to get results...
-            innings = response.json().get("match_details", [])[0].get("innings", []) #to get scores...
-            
-            team1 = innings[0].get("team_batting_id") if len(innings) > 0 else None
-            runs1 = innings[0].get("runs") if len(innings) > 0 else None
-            wickets1 = innings[0].get("wickets") if len(innings) > 0 else None
-            overs1 = innings[0].get("overs") if len(innings) > 0 else None
-            
-            team2 = innings[1].get("team_batting_id") if len(innings) > 1 else None
-            runs2 = innings[1].get("runs") if len(innings) > 1 else None
-            wickets2 = innings[1].get("wickets") if len(innings) > 1 else None
-            overs2 = innings[1].get("overs") if len(innings) > 1 else None 
-
-            result = match.get("result_description") if len(match) > 0 else None
-
-            return pd.Series([team1, runs1, wickets1, overs1, team2, runs2, wickets2, overs2, result])
-        except:
-            st.warning(f"Failed to fetch details for match ID {match_id}.")
-            return pd.Series([None]*9)
-    
-    try:
+                return pd.Series([team1, runs1, wickets1, overs1, team2, runs2, wickets2, overs2, result])
+            except:
+                st.warning(f"Failed to fetch details for match ID {match_id}.")
+                return pd.Series([None]*9)
+        
+       
 
         filtered_df[['team1','runs1','wickets1','overs1','team2','runs2','wickets2','overs2','result']] = filtered_df['id'].apply(get_match_detail)
         #filtered_df['batting_team_1'] = filtered_df['id'].apply(get_match_detail)
@@ -161,7 +153,7 @@ def return_scores(filtered_df):
         filtered_df['home_team_id'].astype(int) == filtered_df['team1'].fillna(-1).astype(int),
         filtered_df['summary1'],filtered_df['summary2']
         )
-
+   
         #away summary (during the first innings team2 is null)
         filtered_df['away_summary'] = np.where(
         filtered_df['away_team_id'].astype(int) == filtered_df['team1'].fillna(-1).astype(int),
@@ -169,16 +161,9 @@ def return_scores(filtered_df):
         )
         
 
-        # Set result to 'Vs' if it's NaN or empty        
-        filtered_df['match_time'] = filtered_df['match_time'].fillna('Vs')
-        filtered_df['match_time'] = filtered_df['match_time'].replace('', 'Vs')
-        filtered_df['result'] = filtered_df['result'].fillna(filtered_df['match_time'])
-        filtered_df['result'] = np.where(
-            filtered_df['result'] == '',
-            filtered_df['match_time'],
-            filtered_df['result']
-        )
-        #filtered_df['result'] = filtered_df['result'].replace('', filtered_df['match_time'])
+        # Set result to 'Vs' if it's NaN or empty
+        filtered_df['result'] = filtered_df['result'].fillna('Vs')
+        filtered_df['result'] = filtered_df['result'].replace('', 'Vs')
         #filtered_df.loc[filtered_df['result'].isna() | (filtered_df['result'] == ""), 'result'] = 'Vs'
         
         #filtered_df['result'] = filtered_df['result'].fillna('Vs')
@@ -193,11 +178,7 @@ def return_scores(filtered_df):
     #except requests.exceptions.SSLError:
     #    return "SSL error: certificate not trusted. Consider adding verify=False temporarily."
     except Exception as e:
-        st.warning(f"{e}")
-        filtered_df[['home_summary', 'away_summary', 'result']] = ""
-        return filtered_df, caption
-        
-        #return pd.DataFrame(), caption
+        return pd.DataFrame(), caption
         # return (f"Error: {e}")
     
 
