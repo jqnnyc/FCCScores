@@ -22,9 +22,8 @@ with open("cricket.css") as f:
 today = datetime.today().date()
 
 #comment this out to automatically select date
-#selected_date = st.date_input("Select match date:", today)
-selected_date = today
-
+selected_date = st.date_input("Select match date:", today)
+#selected_date = today
 
 # Banner
 st.markdown('<div class="welcome-banner">Welcome to Fleet Cricket Club</div>', unsafe_allow_html=True)
@@ -46,7 +45,7 @@ if matches.empty:
                 </div>
                 """, unsafe_allow_html=True)
 else:
-    matchData, captionScores = return_scores(matches)
+    matchData, captionScores = return_scores2(matches, selected_date)
 
     matchData = matchData.sort_values(by='my_team_name')
 
@@ -87,9 +86,6 @@ updateClock();
 
 #matchData = matchData[['id', 'my_team_name', 'oppo_team_name', 'venue']]
 #st.dataframe(matchData)
-
-
-
 
 
 

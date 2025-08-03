@@ -201,4 +201,123 @@ def return_scores(filtered_df):
         # return (f"Error: {e}")
     
 
-    
+
+# @st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
+def return_scores2(filtered_df, matchDate):
+
+    caption = (f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
+
+    url = "https://play-cricket.com/api/v2/result_summary.json"
+    params = {
+        "api_token": api_token,
+        "season": season,
+        "site_id": site_id,
+        "from_match_date": matchDate,
+        "end_match_date": matchDate
+    }
+    try:
+
+        response = requests.get(url, params=params, verify=False)
+        response.raise_for_status()
+   
+        df = pd.DataFrame(response.json().get("result_summary", []))
+        #df = pd.json_normalize(response.json().get("result_summary", []))
+
+        def extract_innings_scores(innings_list):
+            try:
+                team1 = innings_list[0]['team_batting_id'] if len(innings_list) > 0 else None
+                runs1 = innings_list[0]['runs'] if len(innings_list) > 0 else None
+                wickets1 = innings_list[0]['wickets'] if len(innings_list) > 0 else None
+                overs1 = innings_list[0]['overs'] if len(innings_list) > 0 else None
+                balls1 = innings_list[0]['balls'] if len(innings_list) > 0 else None
+
+                team2 = innings_list[1]['team_batting_id'] if len(innings_list) > 1 else None
+                runs2 = innings_list[1]['runs'] if len(innings_list) > 1 else None
+                wickets2 = innings_list[1]['wickets'] if len(innings_list) > 1 else None
+                overs2 = innings_list[1]['overs'] if len(innings_list) > 1 else None
+                balls2 = innings_list[0]['balls'] if len(innings_list) > 1 else None
+
+                return pd.Series([team1, runs1, wickets1, overs1, balls1, team2, runs2, wickets2, overs2, balls2])
+            except Exception:
+                return pd.Series([None]*10)
+
+        df[['team1','runs1','wickets1','overs1','balls1','team2','runs2','wickets2','overs2','balls2']] = df['innings'].apply(extract_innings_scores)
+
+        df = df[['id', 'result_description', 'team1', 'runs1', 'wickets1', 'overs1','balls1', 'team2', 'runs2', 'wickets2', 'overs2','balls2']]
+        if 'id' in df.columns:
+            filtered_df = filtered_df.merge(df, on='id', how='left')
+
+        # balls used instead of overs in some games. coming through as decimals...
+        filtered_df['balls1'] = filtered_df['balls1'].apply(
+            lambda x: str(int(x)) if pd.notnull(x) and x != "" else ""
+        )
+        filtered_df['balls2'] = filtered_df['balls2'].apply(
+            lambda x: str(int(x)) if pd.notnull(x) and x != "" else ""
+        )
+
+        mask = filtered_df[['runs1', 'wickets1', 'overs1']].notna().all(axis=1) & (filtered_df['runs1'] != '')
+        filtered_df['format1'] = np.where(
+            filtered_df['overs1'].astype(str) != '',
+            filtered_df['overs1'].astype(str) + " overs",
+            filtered_df['balls1'].astype(str) + " balls"
+        )
+        filtered_df['summary1'] = np.where(
+        mask,
+        filtered_df['runs1'].astype(str) + "/" +
+        filtered_df['wickets1'].astype(str) + " in " +
+        filtered_df['format1'].astype(str) #+ " overs"
+        , ""
+        )       
+
+        
+        mask = filtered_df[['runs2', 'wickets2', 'overs2']].notna().all(axis=1) & (filtered_df['runs2'] != '')
+        filtered_df['format2'] = np.where(
+            filtered_df['overs2'].astype(str) != '',
+            filtered_df['overs2'].astype(str) + " overs",
+            filtered_df['balls2'].astype(str) + " balls"
+        )
+        filtered_df['summary2'] = np.where(
+        mask,
+        filtered_df['runs2'].astype(str) + "/" +
+        filtered_df['wickets2'].astype(str) + " in " +
+        filtered_df['format2'].astype(str)
+        , ""
+        )   
+
+        #home summary
+        filtered_df['home_summary'] = np.where(
+        filtered_df['home_team_id'].astype(int) == filtered_df['team1'].fillna(-1).astype(int),
+        filtered_df['summary1'],filtered_df['summary2']
+        )
+
+        #away summary (during the first innings team2 is null)
+        filtered_df['away_summary'] = np.where(
+        filtered_df['away_team_id'].astype(int) == filtered_df['team1'].fillna(-1).astype(int),
+        filtered_df['summary1'],filtered_df['summary2']
+        )
+        
+
+        # Set result to 'Vs' if it's NaN or empty        
+        filtered_df['match_time'] = filtered_df['match_time'].fillna('Vs')
+        filtered_df['match_time'] = filtered_df['match_time'].replace('', 'Vs')
+        filtered_df['result'] = filtered_df['result_description'].fillna(filtered_df['match_time'])
+        filtered_df['result'] = np.where(
+            filtered_df['result'] == '',
+            filtered_df['match_time'],
+            filtered_df['result']
+        )
+
+        filtered_df = filtered_df[['id', 'my_team_name', 'oppo_team_name', 'venue', 'my_team_id', 'home_summary', 'away_summary', 'result','homelogo','awaylogo','summary1','summary2','home_team_name','away_team_name']]
+        
+        return filtered_df, caption
+
+    except Exception as e:
+        #st.warning(f"{e}")
+        filtered_df[['home_summary', 'away_summary']] = ""
+        filtered_df['match_time'] = filtered_df['match_time'].fillna('Vs')
+        filtered_df['match_time'] = filtered_df['match_time'].replace('', 'Vs')
+        filtered_df['result'] = filtered_df['match_time']
+        return filtered_df, caption
+        
+        #return pd.DataFrame(), caption
+        # return (f"Error: {e}")
