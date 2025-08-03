@@ -20,10 +20,10 @@ with open("cricket.css") as f:
 # Sidebar single-date selector
 #st.sidebar.header("Filter by Match Date")
 today = datetime.today().date()
-selected_date = today
 
 #comment this out to automatically select date
-selected_date = st.date_input("Select match date:", today)
+#selected_date = st.date_input("Select match date:", today)
+selected_date = today
 
 
 # Banner
@@ -87,6 +87,7 @@ updateClock();
 
 #matchData = matchData[['id', 'my_team_name', 'oppo_team_name', 'venue']]
 #st.dataframe(matchData)
+
 
 
 
