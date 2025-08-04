@@ -202,7 +202,7 @@ def return_scores(filtered_df):
     
 
 
-# @st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
+@st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
 def return_scores2(filtered_df, matchDate):
 
     caption = (f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
@@ -321,3 +321,4 @@ def return_scores2(filtered_df, matchDate):
         
         #return pd.DataFrame(), caption
         # return (f"Error: {e}")
+
