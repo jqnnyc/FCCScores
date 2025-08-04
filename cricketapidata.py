@@ -7,7 +7,6 @@ from datetime import datetime
 club_id = 2744
 site_id = 2744
 season = str(datetime.now().year)
-# api_token = "b79b6148398664ed1c59e9efcf9bb1fb"
 api_token = st.secrets["api_token"]
 
 @st.cache_data(ttl=3600) # Cache data for 1 hour (site reloads every 60 seconds)
@@ -322,5 +321,6 @@ def return_scores2(filtered_df, matchDate):
         
         #return pd.DataFrame(), caption
         # return (f"Error: {e}")
+
 
 
