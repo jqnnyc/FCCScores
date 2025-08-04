@@ -7,7 +7,7 @@ from datetime import datetime
 club_id = 2744
 site_id = 2744
 season = str(datetime.now().year)
-api_token = "b79b6148398664ed1c59e9efcf9bb1fb"
+api_token = st.secrets["api_token"]
 
 @st.cache_data(ttl=55) # Cache data for 55 seconds (site reloads every 60 seconds)
 def returnMatches(matchDate):
@@ -181,5 +181,6 @@ def returnMatches(matchDate):
         return pd.DataFrame(), caption
         # return (f"Error: {e}")
     
+
 
     
