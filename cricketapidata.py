@@ -235,7 +235,7 @@ def return_scores2(filtered_df, matchDate):
                 runs2 = innings_list[1]['runs'] if len(innings_list) > 1 else None
                 wickets2 = innings_list[1]['wickets'] if len(innings_list) > 1 else None
                 overs2 = innings_list[1]['overs'] if len(innings_list) > 1 else None
-                balls2 = innings_list[0]['balls'] if len(innings_list) > 1 else None
+                balls2 = innings_list[1]['balls'] if len(innings_list) > 1 else None
 
                 return pd.Series([team1, runs1, wickets1, overs1, balls1, team2, runs2, wickets2, overs2, balls2])
             except Exception:
@@ -321,6 +321,7 @@ def return_scores2(filtered_df, matchDate):
         
         #return pd.DataFrame(), caption
         # return (f"Error: {e}")
+
 
 
 
